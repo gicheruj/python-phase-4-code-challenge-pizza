@@ -1,6 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import MetaData
-from sqlalchemy.orm import validates
+from sqlalchemy import MetaData, ForeignKey
+from sqlalchemy.orm import relationship, validates
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy_serializer import SerializerMixin
 
@@ -20,9 +20,7 @@ class Restaurant(db.Model, SerializerMixin):
     name = db.Column(db.String)
     address = db.Column(db.String)
 
-    # add relationship
-
-    # add serialization rules
+    pizzas = relationship("RestaurantPizza", back_populates="restaurant", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Restaurant {self.name}>"
@@ -35,9 +33,7 @@ class Pizza(db.Model, SerializerMixin):
     name = db.Column(db.String)
     ingredients = db.Column(db.String)
 
-    # add relationship
-
-    # add serialization rules
+    restaurants = relationship("RestaurantPizza", back_populates="pizza", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Pizza {self.name}, {self.ingredients}>"
@@ -47,13 +43,19 @@ class RestaurantPizza(db.Model, SerializerMixin):
     __tablename__ = "restaurant_pizzas"
 
     id = db.Column(db.Integer, primary_key=True)
+    restaurant_id = db.Column(db.Integer, ForeignKey("restaurants.id"))
+    pizza_id = db.Column(db.Integer, ForeignKey("pizzas.id"))
     price = db.Column(db.Integer, nullable=False)
 
-    # add relationships
+    restaurant = relationship("Restaurant", back_populates="pizzas")
+    pizza = relationship("Pizza", back_populates="restaurants")
 
-    # add serialization rules
-
-    # add validation
+    @validates("price")
+    def validate_price(self, key, price):
+        if not isinstance(price, int) or price < 1 or price > 30:
+            raise ValueError("Price must be an integer between 1 and 30.")
+        return price
 
     def __repr__(self):
         return f"<RestaurantPizza ${self.price}>"
+    
